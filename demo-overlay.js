@@ -120,12 +120,16 @@
     if (!onOrderList()) return;
     var head = document.querySelector('main > header');
     if (!head || head.querySelector('.pso-new-btn')) return;
-    var b = el('button', 'pso-new-btn pso-new-btn--head', '+ Нова РК');
+    var scan = el('button', 'pso-new-btn pso-new-btn--head pso-new-btn--ghost', 'Сканувати кабінет');
+    scan.type = 'button';
+    scan.onclick = openScan;
+    var b = el('button', 'pso-new-btn pso-new-btn--head pso-new-btn--next', '+ Нова РК');
     b.type = 'button';
     b.onclick = openChat;
     var anchorEl = head.querySelector('h1');
-    if (anchorEl && anchorEl.nextSibling) head.insertBefore(b, anchorEl.nextSibling.nextSibling || null);
-    else head.appendChild(b);
+    var ref = anchorEl && anchorEl.nextSibling ? (anchorEl.nextSibling.nextSibling || null) : null;
+    head.insertBefore(scan, ref);
+    head.insertBefore(b, ref);
   }
 
   function ensureBarButton() {
@@ -480,6 +484,159 @@
         'Approve натискає тільки людина: в агента такої кнопки немає.'));
       bubble.appendChild(card);
       scroll();
+    }
+  }
+
+  // ---------------------------------------------------------------- account scan
+  // Scripted scan of campaigns already running in the ad account, including ones built by hand.
+  var SCAN_FOUND = [
+    {
+      sev: 'urgent',
+      name: 'BR | Treino em casa | 20.09',
+      origin: 'створена вручну в Ads Manager',
+      title: 'Мова креативу не відповідає ринку',
+      detail: 'Адсет на Бразилію, а креатив 2113 іспанською. Бразилія говорить португальською: оголошення крутиться вже 19 днів і зливає бюджет.',
+      fix: 'Агент збере замовлення на зміни: замінити креатив на португальську версію 2110.'
+    },
+    {
+      sev: 'urgent',
+      name: 'PL | Joga wieczorem | 02.10',
+      origin: 'створена вручну в Ads Manager',
+      title: 'Мова лендингу не відповідає рекламі',
+      detail: 'Оголошення польською, а посилання веде на moova.example/de (німецький лендинг).',
+      fix: 'Агент збере замовлення на зміни: посилання на moova.example/pl.'
+    },
+    {
+      sev: 'urgent',
+      name: 'Creative test batch 2 | EN-GB | 29.09.26',
+      origin: 'зібрана студією',
+      title: 'Meta відхилила оголошення і змінила таргетинг',
+      detail: 'Одне оголошення не пройшло модерацію, а на всіх 3 адсетах Meta сама ввімкнула Advantage audience.',
+      order: 'de300005'
+    },
+    {
+      sev: 'attention',
+      name: 'DE | Rücken | 25.09',
+      origin: 'створена вручну в Ads Manager',
+      title: 'Немає UTM-міток',
+      detail: 'Два оголошення без utm_campaign і utm_content: реєстрації з них не потраплять у звіти.',
+      fix: 'Агент збере замовлення на зміни: дописати UTM за шаблоном акаунта.'
+    },
+    {
+      sev: 'attention',
+      name: 'EN | Sleep stories | 18.09',
+      origin: 'створена вручну в Ads Manager',
+      title: 'Сторінка з обмеженнями на рекламу',
+      detail: 'Оголошення публікується від сторінки, яка в реєстрі студії позначена як обмежена. Meta може зупинити покази будь-якої миті.',
+      fix: 'Агент збере замовлення на зміни: перенести оголошення на основну сторінку Moova.'
+    }
+  ];
+  var scanOpen = false;
+
+  function openScan() {
+    if (scanOpen) return;
+    scanOpen = true;
+    var timers = [];
+    var back = el('div', 'pso-backdrop');
+    var box = el('div', 'pso-chat');
+    box.setAttribute('role', 'dialog');
+    box.setAttribute('aria-modal', 'true');
+    box.setAttribute('aria-label', 'Сканування кабінету');
+
+    var head = el('div', 'pso-chat-head');
+    var ht = el('div');
+    ht.appendChild(el('h2', null, 'Сканування запущених кампаній'));
+    ht.appendChild(el('small', null, 'Ті самі перевірки, що проходить кожне нове замовлення, студія запускає по всьому, що вже крутиться в кабінеті, зокрема по кампаніях, створених вручну.'));
+    head.appendChild(ht);
+    var x = el('button', 'pso-x', '×');
+    x.type = 'button';
+    x.setAttribute('aria-label', 'Закрити');
+    head.appendChild(x);
+
+    var log = el('div', 'pso-chat-log');
+    var foot = el('div', 'pso-chat-foot');
+    foot.appendChild(el('div', 'pso-disclaimer',
+      'Сканування лише читає кабінет і нічого в ньому не змінює. Виправлення йде звичайним шляхом: агент збирає замовлення на зміни, людина його схвалює. У демо результати заскриптовані.'));
+
+    box.appendChild(head);
+    box.appendChild(log);
+    box.appendChild(foot);
+    back.appendChild(box);
+    document.body.appendChild(back);
+
+    function close() {
+      timers.forEach(clearTimeout);
+      back.remove();
+      document.removeEventListener('keydown', onKey, true);
+      scanOpen = false;
+    }
+    function onKey(e) { if (e.key === 'Escape') { e.stopPropagation(); close(); } }
+    document.addEventListener('keydown', onKey, true);
+    x.onclick = close;
+    back.addEventListener('mousedown', function (e) { if (e.target === back) close(); });
+
+    var steps = [
+      ['Читаю кабінет Moova Ads (main)', '23 активні кампанії, 41 адсет, 58 оголошень: 9 кампаній зібрані студією, 14 створені вручну'],
+      ['Мова креативів проти ринку адсету', 'звіряю мову кожного файлу з мовою, яку ринок має в карті ринків'],
+      ['Мова лендингів проти мови оголошень', 'відкриваю кожне посилання і порівнюю мову сторінки з текстом оголошення'],
+      ['Сторінки, UTM, модерація, бюджети', 'реєстр сторінок, шаблон UTM акаунта, статуси Meta, бюджети проти стандартів'],
+      ['Звіряю замовлення студії з тим, що реально стоїть у Meta', 'поле за полем, як після кожного запуску']
+    ];
+    var wrap = el('div', 'pso-msg pso-msg--agent');
+    wrap.appendChild(el('div', 'pso-who', 'Студія'));
+    var bubble = el('div', 'pso-bubble');
+    bubble.appendChild(document.createTextNode('Сканую кабінет:'));
+    var list = el('ul', 'pso-steps');
+    bubble.appendChild(list);
+    wrap.appendChild(bubble);
+    log.appendChild(wrap);
+
+    var t = 400;
+    steps.forEach(function (st) {
+      var li = el('li', 'pso-step');
+      li.appendChild(el('span', 'pso-step-icon'));
+      li.appendChild(el('span', 'pso-step-title', st[0]));
+      li.appendChild(el('span', 'pso-step-sub', st[1]));
+      timers.push(setTimeout(function () { li.setAttribute('data-state', 'run'); list.appendChild(li); }, t));
+      t += 850;
+      timers.push(setTimeout(function () { li.setAttribute('data-state', 'done'); }, t));
+    });
+    timers.push(setTimeout(showResults, t + 400));
+
+    function showResults() {
+      var c = { urgent: 0, attention: 0 };
+      SCAN_FOUND.forEach(function (f) { c[f.sev]++; });
+      var res = el('div', 'pso-msg pso-msg--agent');
+      res.appendChild(el('div', 'pso-who', 'Студія'));
+      var b = el('div', 'pso-bubble');
+      b.appendChild(el('div', 'pso-scan-sum',
+        'Перевірено 23 кампанії: ' + c.urgent + ' критичні проблеми, ' + c.attention + ' попередження, ' +
+        (23 - SCAN_FOUND.length) + ' кампаній без зауважень.'));
+      SCAN_FOUND.forEach(function (f) {
+        var card = el('div', 'pso-scan-item');
+        card.setAttribute('data-sev', f.sev);
+        var top = el('div', 'pso-scan-top');
+        top.appendChild(el('span', 'pso-sev pso-sev--' + f.sev, SEV[f.sev].label));
+        top.appendChild(el('b', null, f.title));
+        card.appendChild(top);
+        var meta = el('div', 'pso-scan-meta');
+        meta.appendChild(el('span', 'pso-scan-name', f.name));
+        meta.appendChild(document.createTextNode(' · ' + f.origin));
+        card.appendChild(meta);
+        card.appendChild(el('div', 'pso-scan-detail', f.detail));
+        if (f.order) {
+          var open = el('button', 'pso-scan-link', 'Відкрити замовлення в студії →');
+          open.type = 'button';
+          open.onclick = function () { close(); goToOrder(f.order); };
+          card.appendChild(open);
+        } else if (f.fix) {
+          card.appendChild(el('div', 'pso-scan-fix', f.fix));
+        }
+        b.appendChild(card);
+      });
+      res.appendChild(b);
+      log.appendChild(res);
+      log.scrollTop = res.offsetTop - 12;
     }
   }
 

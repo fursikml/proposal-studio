@@ -126,7 +126,7 @@ a[data-pso-tone="clean"]::before { background: var(--pso-green); }
   cursor: pointer; color: var(--pso-grey); padding: 4px 8px; border-radius: 6px;
 }
 .pso-x:hover { background: var(--pso-grey-soft); }
-.pso-chat-log { flex: 1; overflow-y: auto; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+.pso-chat-log { position: relative; flex: 1; overflow-y: auto; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
 .pso-msg { max-width: 88%; line-height: 1.45; }
 .pso-msg--user {
   align-self: flex-end; background: var(--pso-blue); color: #fff;
@@ -195,4 +195,28 @@ a[data-pso-tone="clean"]::before { background: var(--pso-green); }
   .pso-backdrop { padding: 0; }
   .pso-new-btn--head { font-size: 13px; padding: 6px 10px; margin-right: 0; }
   .mv-bar .pso-new-btn { padding: 4px 8px; font-size: 12px; }
+}
+
+/* ---------- account scan ---------- */
+.pso-new-btn--ghost { background: #fff; color: var(--pso-blue); box-shadow: inset 0 0 0 1px #bfd3f6; }
+.pso-new-btn--ghost:hover { background: var(--pso-blue-soft); filter: none; }
+.pso-new-btn--head.pso-new-btn--next { margin-left: 0; }
+.pso-scan-sum { font-weight: 600; margin-bottom: 10px; }
+.pso-scan-item {
+  background: #fff; border: 1px solid var(--pso-line); border-left: 4px solid var(--pso-grey);
+  border-radius: 10px; padding: 10px 12px; margin-top: 8px;
+}
+.pso-scan-item[data-sev="urgent"] { border-left-color: var(--pso-red); }
+.pso-scan-item[data-sev="attention"] { border-left-color: var(--pso-orange); }
+.pso-scan-top { display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px; }
+.pso-scan-meta { color: var(--pso-grey); font-size: 12px; margin-top: 2px; }
+.pso-scan-name { font-weight: 600; color: #374151; }
+.pso-scan-detail { margin-top: 6px; font-size: 13px; line-height: 1.45; }
+.pso-scan-fix { margin-top: 6px; font-size: 12.5px; color: var(--pso-green); }
+.pso-scan-link {
+  margin-top: 8px; border: 0; background: none; padding: 0; color: var(--pso-blue);
+  font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+@media (max-width: 640px) {
+  .pso-new-btn--ghost { padding: 6px 8px; }
 }
