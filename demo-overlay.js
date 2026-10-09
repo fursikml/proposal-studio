@@ -17,7 +17,9 @@
     creative_disapproved: 'Meta відхилила оголошення на модерації. Потрібен інший креатив або текст.',
     added: 'Meta сама додала налаштування, якого не було в замовленні. Зазвичай нешкідливо, але варто знати.',
     budget_jump: 'Бюджет зростає більш ніж наполовину за один раз. Різкий стрибок може скинути навчання адсету.',
-    keywords_multiword: 'Мінус-слово з одного слова може відрізати потрібний трафік.'
+    keywords_multiword: 'Мінус-слово з одного слова може відрізати потрібний трафік.',
+    creative_language_mismatch: 'Мова креативу не відповідає ринку: креатив іспанською, а Бразилія говорить португальською. Таке оголошення зіллє бюджет, тому студія не дає його схвалити.',
+    landing_language_mismatch: 'Оголошення португальською веде на іспанський лендинг. Людина клікне й піде, не зрозумівши сторінку. Посилання треба замінити на бразильський лендинг.'
   };
   var SEV = {
     urgent: { label: 'Терміново', rank: 0 },
@@ -47,13 +49,16 @@
   // ---------------------------------------------------------------- order list
   function toneOf(a) {
     var text = a.innerText || '';
-    if (a.querySelector('[data-live="issues"], [data-severity="urgent"]')) return 'urgent';
+    if (a.querySelector('[data-live="issues"], [data-severity="urgent"]')) {
+      return /pending review/i.test(text) ? 'blocked' : 'urgent';
+    }
     if (/\battention\b/i.test(text)) return 'attention';
     if (/waits for Execute/i.test(text)) return 'execute';
     if (/pending review/i.test(text)) return 'clean';
     return null;
   }
   var TAG_TEXT = {
+    blocked: 'критична помилка, Approve заблоковано',
     urgent: 'проблема після запуску',
     attention: 'чекає Approve, є попередження',
     execute: 'чекає Execute',
@@ -61,7 +66,7 @@
   };
 
   function decorateList() {
-    var counts = { urgent: 0, attention: 0, execute: 0, clean: 0 };
+    var counts = { blocked: 0, urgent: 0, attention: 0, execute: 0, clean: 0 };
     document.querySelectorAll('a[class*="_card_"], a[class*="_row_"]').forEach(function (a) {
       var tone = toneOf(a);
       if (!tone) {
@@ -87,7 +92,7 @@
     if (!needs) return;
     var scrollBox = needs.closest('[class*="_scroll_"]');
     if (!scrollBox) return;
-    var sig = [counts.urgent, counts.attention, counts.execute, counts.clean].join(',');
+    var sig = [counts.blocked, counts.urgent, counts.attention, counts.execute, counts.clean].join(',');
     var box = document.querySelector('.pso-summary');
     if (box && box.getAttribute('data-sig') === sig) return;
     if (!box) {
@@ -103,11 +108,12 @@
       s.appendChild(document.createTextNode(text));
       box.appendChild(s);
     }
+    if (counts.blocked) item('urgent', plural(counts.blocked, 'замовлення має', 'замовлення мають', 'замовлень мають') + ' критичну помилку: Approve заблоковано, доки її не виправлять');
     var review = counts.attention + counts.clean;
     if (review) item('attention', plural(review, 'замовлення чекає', 'замовлення чекають', 'замовлень чекають') + ' на Approve' + (counts.attention ? ', з них ' + counts.attention + ' з попередженнями' : ''));
     if (counts.execute) item('execute', plural(counts.execute, 'схвалене чекає', 'схвалені чекають', 'схвалених чекають') + ' на Execute');
     if (launchedProblems) item('urgent', plural(launchedProblems, 'запущене замовлення має', 'запущені замовлення мають', 'запущених замовлень мають') + ' проблему: див. Other orders нижче');
-    if (!review && !counts.execute && !launchedProblems) item('clean', 'нічого не чекає на вас');
+    if (!counts.blocked && !review && !counts.execute && !launchedProblems) item('clean', 'нічого не чекає на вас');
   }
 
   function ensureHeadButton() {
@@ -225,7 +231,10 @@
         body.appendChild(a);
       });
       panel.appendChild(body);
-      if (isDraft && !c.urgent) {
+      if (isDraft && c.urgent) {
+        panel.appendChild(el('div', 'pso-focus-foot pso-focus-foot--block',
+          'Критичні помилки блокують Approve. Агент виправляє замовлення, і студія перевіряє його знову.'));
+      } else if (isDraft) {
         panel.appendChild(el('div', 'pso-focus-foot',
           'Попередження не блокують Approve: студія лише просить переконатися, що це свідомо.'));
       }
@@ -273,6 +282,26 @@
       }
     },
     {
+      id: 'br',
+      chip: 'Креатив-тест на Бразилію: 3 статики, по $10 на день',
+      match: /бразил|brazil|brasil|\bBR\b|португал/i,
+      order: 'de300018',
+      steps: [
+        ['Читаю контракт студії', 'схема замовлення, карта ринків: @moova.br, Бразилія, португальська'],
+        ['Підбираю креативи з бібліотеки', 'обрано 2110, 2111 і 2113. 2113 з іспанської папки: схожий за змістом, але інша мова'],
+        ['Пишу тексти і ставлю посилання', 'для 2111 підставлено лендинг moova.example/es замість /br'],
+        ['Збираю замовлення', 'нова кампанія Creative Test | BR, 3 адсети по $10 на день, 4 дні'],
+        ['Проганяю перевірки', '2 критичні помилки: мова креативу 2113 не відповідає ринку, лендинг 2111 іспанською', 'error'],
+        ['Створюю замовлення', 'Approve заблоковано, доки помилки не виправлені']
+      ],
+      result: {
+        lead: 'Замовлення створено, але студія знайшла критичні помилки:',
+        title: 'Creative test batch 1 | BR | 13.10.26',
+        rows: [['Платформа', 'Meta, мета Sales'], ['Структура', '3 адсети, 3 оголошення'], ['Бюджет', '$30 на день, $120 за 4 дні'], ['Перевірки', '2 критичні помилки, Approve заблоковано']],
+        hint: 'Цей приклад показує, що помилку агента ловить студія, а не людина очима.'
+      }
+    },
+    {
       id: 'scale',
       chip: 'Масштабуй переможця тесту 2, решту постав на паузу',
       match: /масштаб|scale|переможц|winner|пауз/i,
@@ -310,7 +339,7 @@
   ];
 
   function pickScenario(text) {
-    var order = ['google', 'scale', 'test', 'promo'];
+    var order = ['google', 'scale', 'br', 'test', 'promo'];
     for (var i = 0; i < order.length; i++) {
       var s = SCENARIOS.filter(function (x) { return x.id === order[i]; })[0];
       if (s.match.test(text)) return s;
@@ -434,7 +463,7 @@
 
     function showResult(sc) {
       var bubble = agentWrap();
-      bubble.appendChild(document.createTextNode('Готово. Замовлення чекає на вашу перевірку:'));
+      bubble.appendChild(document.createTextNode(sc.result.lead || 'Готово. Замовлення чекає на вашу перевірку:'));
       var card = el('div', 'pso-result');
       card.appendChild(el('h3', null, sc.result.title));
       var dl = el('dl');

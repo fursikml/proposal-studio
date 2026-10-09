@@ -32,7 +32,7 @@ a[data-pso-tone]::before {
   content: ""; position: absolute; left: 0; top: 8px; bottom: 8px;
   width: 4px; border-radius: 0 4px 4px 0;
 }
-a[data-pso-tone="urgent"]::before { background: var(--pso-red); }
+a[data-pso-tone="urgent"]::before, a[data-pso-tone="blocked"]::before { background: var(--pso-red); }
 a[data-pso-tone="attention"]::before { background: var(--pso-orange); }
 a[data-pso-tone="execute"]::before { background: var(--pso-blue); }
 a[data-pso-tone="clean"]::before { background: var(--pso-green); }
@@ -40,7 +40,7 @@ a[data-pso-tone="clean"]::before { background: var(--pso-green); }
   display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 999px;
   font-size: 11px; font-weight: 600; vertical-align: 2px; white-space: nowrap;
 }
-.pso-tag--urgent { background: var(--pso-red-soft); color: var(--pso-red); }
+.pso-tag--urgent, .pso-tag--blocked { background: var(--pso-red-soft); color: var(--pso-red); }
 .pso-tag--attention { background: var(--pso-orange-soft); color: var(--pso-orange); }
 .pso-tag--execute { background: var(--pso-blue-soft); color: var(--pso-blue); }
 .pso-tag--clean { background: var(--pso-green-soft); color: var(--pso-green); }
@@ -102,6 +102,7 @@ a[data-pso-tone="clean"]::before { background: var(--pso-green); }
 .pso-sev--attention { color: var(--pso-orange); }
 .pso-sev--note { color: var(--pso-grey); }
 .pso-focus-foot { padding: 6px 14px 10px; color: var(--pso-grey); font-size: 12px; }
+.pso-focus-foot--block { color: var(--pso-red); font-weight: 600; }
 
 /* ---------- agent chat ---------- */
 .pso-backdrop {
@@ -148,6 +149,10 @@ a[data-pso-tone="clean"]::before { background: var(--pso-green); }
 .pso-step[data-state="warn"] .pso-step-icon {
   background: var(--pso-orange) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 4v5M8 11.5v.5' fill='none' stroke='white' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") center/12px no-repeat;
 }
+.pso-step[data-state="error"] .pso-step-icon {
+  background: var(--pso-red) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M5 5l6 6M11 5l-6 6' fill='none' stroke='white' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") center/12px no-repeat;
+}
+.pso-step[data-state="error"] .pso-step-sub { color: var(--pso-red); }
 .pso-step-title { font-weight: 600; }
 .pso-step-sub { grid-column: 2; color: #4b5563; font-size: 13px; }
 @keyframes pso-spin { to { transform: rotate(360deg); } }
